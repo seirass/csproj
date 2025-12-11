@@ -5,15 +5,8 @@ import time as t
 weight = {}
 conf_set = {}
 order = {}
-domains = rd.read_domains("rlfap/dom11.txt")
-variables = rd.read_variables("rlfap/var11.txt")
-constraints, neighbours = rd.read_constraints("rlfap/ctr11.txt")
 var_to_dom = {}
-for i in variables:
-    var_to_dom[i] = domains[variables[i][0]] 
 
-for ctr in constraints:
-    weight[ctr] = 1
 
 
 def forward_checking(csp, var, value, assignment, removals):
@@ -86,23 +79,41 @@ def dom_wdeg(assigned,csp):
 
     return best
 
-for var in variables:
+
+#################################################################
+#################### INFORMATION GATHERING ######################
+#################################################################
+
+f_solutions = []
+instances = ["2-f24","2-f25","3-f10","3-f11","6-w2","7-w1-f4","7-w1-f5","8-f10","8-f11","11","14-f27","14-f28"]
+for instance in instances:
+    varname = "rlfap/var" + instance + ".txt"
+    ctrname = "rlfap/ctr" + instance + ".txt" 
+    domname = "rlfap/dom" + instance + ".txt"
+
+    domains = rd.read_domains(domname)
+    variables = rd.read_variables(varname)
+    constraints, neighbours = rd.read_constraints(ctrname)
+
+    for i in variables:
+        var_to_dom[i] = domains[variables[i][0]] 
+
+    for ctr in constraints:
+        weight[ctr] = 1
+
+    for var in variables:
         conf_set[var] = set()
         order[var] = 0
 
-rlfap = c.CSP(variables,var_to_dom,neighbours,check_constraints)
+    rlfap = c.CSP(variables,var_to_dom,neighbours,check_constraints)
 
-start= t.time()
-solution = c.backtracking_search(rlfap,select_unassigned_variable=dom_wdeg,order_domain_values=c.unordered_domain_values,inference=forward_checking)
-
-for key, value in solution.items():
-    print(f"{key} : {value} ")
-print(len(solution))
-end = t.time()
-diff =  end - start
-print(diff)
+    start = t.time()
+    solution = c.backtracking_search(rlfap,select_unassigned_variable=dom_wdeg,order_domain_values=c.unordered_domain_values,inference=forward_checking)
+    end = t.time() - start
+    if solution is not None:
+        f_solutions.append((instance,end))
 
 
-for ctr in constraints:
-    weight[ctr] = 1
+    print(varname,ctrname, domname, "\n")
 
+print(f_solutions)
