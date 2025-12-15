@@ -413,6 +413,8 @@ def backtracking_search(csp, select_unassigned_variable=first_unassigned_variabl
         for value in order_domain_values(var, assignment, csp):
             if 0 == csp.nconflicts(var, value, assignment):
                 csp.assign(var, value, assignment)
+                if csp.nassigns > 250000:
+                    return None
                 removals = csp.suppose(var, value)
                 if inference(csp, var, value, assignment, removals):
                     result = backtrack(assignment)
