@@ -1,6 +1,7 @@
 import read as rd
 import csp as c
-import time as t 
+import time as t
+import random
 
 weight = {}
 conf_set = {}
@@ -8,6 +9,22 @@ order = {}
 var_to_dom = {}
 
 
+def min_conflicts(csp, max_steps=100000):
+    """Solve a CSP by stochastic Hill Climbing on the number of conflicts."""
+    # Generate a complete assignment for all variables (probably with conflicts)
+    csp.current = current = {}
+    for var in csp.variables:
+        val = c.min_conflicts_value(csp, var, current)
+        csp.assign(var, val, current)
+    # Now repeatedly choose a random conflicted variable and change it
+    for i in range(max_steps):
+        conflicted = csp.conflicted_vars(current)
+        if not conflicted:
+            return current
+        var = random.choice(conflicted)
+        val = c.min_conflicts_value(csp, var, current)
+        csp.assign(var, val, current)
+    return None
 
 def forward_checking(csp, var, value, assignment, removals):
     """Prune neighbor values inconsistent with var=value."""
@@ -74,7 +91,7 @@ def revise(csp, Xi, Xj, removals, checks=0):
 def check_constraints(A,A_val,B,B_val):
     global constraints 
 
-    #as not to violate the csp class's definitiion
+    #as not to violate the csp class's definition
 
     operator , k = constraints[(A,B)]
     if operator == '>':
@@ -130,7 +147,9 @@ def dom_wdeg(assigned,csp):
 #################### INFORMATION GATHERING ######################
 #################################################################
 
-f_solutions = []
+f_solutionsmac = []
+f_solutionsfc = []
+f_solutionsmc = []
 instances = ["2-f24","2-f25","3-f10","3-f11","6-w2","7-w1-f4","7-w1-f5","8-f10","8-f11","11","14-f27","14-f28"]
 for instance in instances:
     varname = "rlfap/var" + instance + ".txt"
@@ -152,19 +171,36 @@ for instance in instances:
         order[var] = 0
 
     rlfap = c.CSP(variables,var_to_dom,neighbours,check_constraints)
-
+    print(varname, ctrname, domname, "\n")
     start = t.time()
-    solution = solution = c.backtracking_search(rlfap, select_unassigned_variable=dom_wdeg, order_domain_values=c.unordered_domain_values, inference=mac)
+    solutionmac = c.backtracking_search(rlfap, select_unassigned_variable=dom_wdeg, order_domain_values=c.unordered_domain_values, inference=mac)
+    endmac = t.time() - start
+    solutionfc = c.backtracking_search(rlfap, select_unassigned_variable=dom_wdeg, order_domain_values=c.unordered_domain_values, inference=forward_checking)
+    endfc = t.time() - endmac
+    solutionmc = min_conflicts(rlfap)
+    endmc = t.time() - endfc
     end = t.time() - start
-    if solution is not None:
-        f_solutions.append((instance,end,rlfap.nassigns))
+    if solutionmac is not None:
+        f_solutionsmac.append((instance,endmac,rlfap.nassigns))
+    if solutionfc is not None:
+        f_solutionsfc.append((instance,endfc,rlfap.nassigns))
+    if solutionmc is not None:
+        f_solutionsmc.append((instance,endmc))
 
-
-    print(varname,ctrname, domname, "\n")
     var_to_dom.clear()
     weight.clear()
     conf_set.clear()
     order.clear()
 
-for sol in f_solutions:
+print("Solutions from MAC: \n")
+for sol in f_solutionsmac:
     print(sol, "\n")
+
+print("Solutions from FC: \n")
+for sol in f_solutionsfc:
+    print(sol, "\n")
+
+print("Solutions from MC: \n")
+for sol in f_solutionsmc:
+    print(sol, "\n")
+
